@@ -3,31 +3,51 @@ const path = require('path');
 const fs = require('fs');
 
 const server = http.createServer((req, res) => {
-  if (req.url === '/') {
-    fs.readFile(path.join(__dirname, 'public', 'index.html'), (err, data) => {
-      if (!err && data) {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(data);
-      } else throw new Error(err);
-    });
+  // Dynamic File Path
+  let file = req.url === '/' ? 'index.html' : req.url;
+  let filePath = path.join(__dirname, 'public', file);
+
+  let fileExtension = path.extname(filePath);
+
+  let contentType = '';
+  switch (fileExtension) {
+    case '.html':
+      contentType = 'text/html';
+      break;
+    case '.css':
+      contentType = 'text/css';
+      break;
+    case '.js':
+      contentType = 'text/js';
+      break;
+    case '.json':
+      contentType = 'application/json';
+      break;
+    case '.png':
+      contentType = 'img/png';
+      break;
   }
-  if (req.url === '/about') {
-    fs.readFile(path.join(__dirname, 'public', 'about.html'), (err, data) => {
-      if (!err && data) {
-        res.writeHead(200, { 'Content-type': 'text/html' });
-        res.end(data);
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      if (err.code === 'ENOENT') {
+        fs.readFile(path.join(__dirname, 'public', '404.html'), (err, data) => {
+          if (!err && data) {
+            res.writeHead(404);
+            res.end(data);
+          } else {
+            res.end(err);
+          }
+        });
+      } else {
+        res.writeHead(500);
+        res.end('<h2>Error 500: Internal Server Error...</h2>');
       }
-    });
-  }
-  if (req.url === '/api/users') {
-    const users = [
-      { name: 'farhan', age: 20 },
-      { name: 'jatin', age: 21 },
-      { name: 'bipin', age: 21 }
-    ];
-    res.writeHead(200, { 'Content-type': 'application/json' });
-    res.end(JSON.stringify(users));
-  }
+    } else {
+      res.writeHead(200, { 'Content-type': contentType });
+      res.end(data);
+    }
+  });
 });
 
 const PORT = process.env.PORT || 5000;
